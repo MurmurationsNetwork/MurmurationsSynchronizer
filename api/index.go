@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -19,8 +19,12 @@ const mongoDefaultDB = "mapdata"
 
 type Node struct {
 	Profiles []map[string]interface{} `json:"data,omitempty"`
-	Links    map[string]interface{}   `json:"links,omitempty"`
+	Meta     map[string]interface{}   `json:"meta,omitempty"`
 	Errors   map[string]interface{}   `json:"errors,omitempty"`
+}
+
+type Req struct {
+	SearchAfter interface{} `json:"search_after"`
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -31,39 +35,18 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// get current last_updated from mongo
-	lastUpdated, err := getLastUpdated(mongoClient)
+	// get current sort from mongo
+	sort, err := getSort(mongoClient)
 
 	// get data from MurmurationsServices
-	now := time.Now().Unix()
-	nodes, err := getNodes(lastUpdated, "")
+	nodes, err := getNodes(sort)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
-	// save profiles
-	for _, profile := range nodes.Profiles {
-		isDuplicated, err := saveOneProfile(mongoClient, profile)
-		if isDuplicated {
-			continue
-		}
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-	}
-
-	nextPage := nodes.Links["next"].(string)
-	// todo: if there is the next page, continue to process
-	// todo: bug: due to the limitation of getting data, this part needs to revise
-	for nodes.Links["next"] != nil {
-		fmt.Println(nextPage)
-		nodes, err := getNodes(lastUpdated, nextPage)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
+	if nodes.Profiles != nil {
+		// save profiles
 		for _, profile := range nodes.Profiles {
 			isDuplicated, err := saveOneProfile(mongoClient, profile)
 			if isDuplicated {
@@ -74,14 +57,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		nextPage = nodes.Links["next"].(string)
-	}
 
-	// save current Timestamp to Mongo
-	err = saveTimestamp(mongoClient, now)
-	if err != nil {
-		log.Fatal(err)
-		return
+		// save current sort to Mongo
+		err = saveSort(mongoClient, nodes.Meta["sort"])
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
 	}
 
 	// disconnect Mongo
@@ -124,29 +106,47 @@ func disconnectMongo(client *mongo.Client) error {
 	return nil
 }
 
-func getLastUpdated(client *mongo.Client) (int64, error) {
+func getSort(client *mongo.Client) (interface{}, error) {
 	coll := client.Database(mongoDefaultDB).Collection("settings")
 	filter := bson.D{{"name", "current"}}
 	var setting map[string]interface{}
 	err := coll.FindOne(context.TODO(), filter).Decode(&setting)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
-	return setting["last_updated"].(int64), nil
+	return setting["sort"], nil
 }
 
-func getNodes(lastUpdated int64, nodeUrl string) (*Node, error) {
-	if nodeUrl == "" {
-		nodeUrl = os.Getenv("NODE_URL") + "/nodes"
-		if lastUpdated != 0 {
-			nodeUrl += "?last_updated=" + strconv.Itoa(int(lastUpdated))
-		}
+func saveSort(client *mongo.Client, sort interface{}) error {
+	coll := client.Database(mongoDefaultDB).Collection("settings")
+	filter := bson.D{{"name", "current"}}
+	update := bson.D{{"$set", bson.D{{"sort", sort}}}}
+	opts := options.Update().SetUpsert(true)
+	_, err := coll.UpdateOne(context.TODO(), filter, update, opts)
+	if err != nil {
+		return err
 	}
+	return nil
+}
+
+func getNodes(sort interface{}) (*Node, error) {
+	nodeUrl := os.Getenv("NODE_URL") + "/export"
 	client := http.Client{
 		Timeout: time.Second * 5,
 	}
 
-	res, err := client.Get(nodeUrl)
+	reqBody := Req{
+		SearchAfter: sort,
+	}
+	// make request to buffer
+	var b bytes.Buffer
+	err := json.NewEncoder(&b).Encode(reqBody)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	res, err := client.Post(nodeUrl, "application/json", &b)
 	if err != nil {
 		return nil, err
 	}
@@ -187,15 +187,4 @@ func saveOneProfile(client *mongo.Client, profile map[string]interface{}) (bool,
 		return false, err
 	}
 	return false, nil
-}
-
-func saveTimestamp(client *mongo.Client, timestamp int64) error {
-	coll := client.Database(mongoDefaultDB).Collection("settings")
-	filter := bson.D{{"name", "current"}}
-	update := bson.D{{"$set", bson.D{{"last_updated", int32(timestamp)}}}}
-	_, err := coll.UpdateOne(context.TODO(), filter, update)
-	if err != nil {
-		return err
-	}
-	return nil
 }
