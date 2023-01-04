@@ -48,10 +48,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if nodes.Profiles != nil {
 		// save profiles
 		for _, profile := range nodes.Profiles {
-			isDuplicated, err := saveOneProfile(mongoClient, profile)
-			if isDuplicated {
-				continue
-			}
+			err := saveOneProfile(mongoClient, profile)
 			if err != nil {
 				log.Fatal(err)
 				return
@@ -165,26 +162,15 @@ func getNodes(sort interface{}) (*Node, error) {
 	return data, nil
 }
 
-func saveOneProfile(client *mongo.Client, profile map[string]interface{}) (bool, error) {
-	// find duplicate: if profile_url is the same, print the message skip the data
+func saveOneProfile(client *mongo.Client, profile map[string]interface{}) error {
 	coll := client.Database(mongoDefaultDB).Collection("profiles")
-	if profile["profile_url"] != nil {
-		filter := bson.D{{"profile_url", profile["profile_url"]}}
-		count, err := coll.CountDocuments(context.TODO(), filter)
-		if err != nil {
-			return false, err
-		}
-		if count > 0 {
-			fmt.Println("Profile Duplicated:")
-			fmt.Println(profile)
-			return true, nil
-		}
-	}
-
+	filter := bson.D{{"profile_url", profile["profile_url"]}}
+	update := bson.D{{"$set", profile}}
+	opts := options.Update().SetUpsert(true)
 	// insert the profile
-	_, err := coll.InsertOne(context.TODO(), profile)
+	_, err := coll.UpdateOne(context.TODO(), filter, update, opts)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return false, nil
+	return nil
 }
