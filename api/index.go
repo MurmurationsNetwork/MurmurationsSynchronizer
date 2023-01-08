@@ -28,6 +28,13 @@ type Req struct {
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
+	authorization := r.Header.Get("authorization")
+	apiSecretKey := os.Getenv("API_SECRET_KEY")
+	if authorization != "Bearer "+apiSecretKey {
+		fmt.Fprintf(w, "<h1>Unauthorized Operation!</h1>")
+		return
+	}
+
 	// connect to MongoDB
 	mongoClient, err := connectMongo()
 	if err != nil {
