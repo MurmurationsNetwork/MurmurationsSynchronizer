@@ -1,2 +1,2 @@
 deploy:
-	helm upgrade murmurations-allocator ./murmurationsSynchronizer --set env=$(DEPLOY_ENV) --install --atomic
+	helm upgrade murmurations-synchronizer ./murmurationsSynchronizer --set env=$(DEPLOY_ENV) --install --atomic

@@ -12,9 +12,10 @@ spec:
             - name: synchronizer-job
               image: {{ .Values.image }}
               imagePullPolicy: IfNotPresent
-              command: ["sh", "-c", "curl curl --request GET --url ${SYNCHRONIZER_URL} --header 'Authorization: Bearer ${API_SECRET_KEY}'"]
               envFrom:
                 - configMapRef:
                     name: synchronizer-job-config
                 - secretRef:
-                    name: synchronizer-app-secret
+                    name: synchronizer-job-secret
+              args: ["sh", "-c", "curl --request GET \ --url $(SYNCHRONIZER_URL) \ --header 'Authorization: Bearer $(API_SECRET_KEY)'"]
+          restartPolicy: Never

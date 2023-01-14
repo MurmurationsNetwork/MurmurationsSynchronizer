@@ -13,5 +13,5 @@
 ### Production/Staging
 1. Add secret, replace "YOUR_KEY" with the correct key
 ```
-kubectl create secret generic synchronizer-app-secret --from-literal="API_SECRET_KEY=YOUR_KEY"
+kubectl create secret generic synchronizer-job-secret --from-literal="API_SECRET_KEY=YOUR_KEY"
 ```
