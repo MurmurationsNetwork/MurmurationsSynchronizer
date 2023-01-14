@@ -6,7 +6,7 @@ data:
   {{- if eq .Values.env "production" }}
   SYNCHRONIZER_URL: https://murmurations-synchronizer.vercel.app/api
   {{- else if eq .Values.env "staging" }}
-  SYNCHRONIZER_URL: https://murmurations-synchronizer.vercel.app/api
+  SYNCHRONIZER_URL: https://test-murmurations-synchronizer.vercel.app/api
   {{- else }}
-  SYNCHRONIZER_URL: https://murmurations-synchronizer.vercel.app/api
+  SYNCHRONIZER_URL: https://test-murmurations-synchronizer.vercel.app/api
   {{- end }}
