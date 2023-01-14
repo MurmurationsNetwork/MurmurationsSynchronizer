@@ -1,0 +1,2 @@
+image: "curlimages/curl:7.87.0"
+env: ""
