@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: synchronizer-job
+spec:
+  schedule: "* * * * *"  # every minute
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: synchronizer-job
+              image: {{ .Values.image }}
+              imagePullPolicy: IfNotPresent
+              command: ["sh", "-c", "curl curl --request GET --url ${SYNCHRONIZER_URL} --header 'Authorization: Bearer ${API_SECRET_KEY}'"]
+              envFrom:
+                - configMapRef:
+                    name: synchronizer-job-config
+                - secretRef:
+                    name: synchronizer-app-secret
