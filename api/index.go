@@ -52,7 +52,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if nodes.Profiles != nil {
+	if len(nodes.Profiles) != 0 {
 		// save profiles
 		for _, profile := range nodes.Profiles {
 			err := saveOneProfile(mongoClient, profile)
