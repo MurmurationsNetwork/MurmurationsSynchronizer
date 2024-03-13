@@ -9,16 +9,14 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    env:
+      SERVER_IP: ${{ secrets.PRODUCTION_SERVER_IP }}
+      KUBECONFIG_PATH: ${{ secrets.KUBECONFIG_PATH }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      DEPLOY_ENV: production
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-
-      - name: Save DigitalOcean kubeconfig with short-lived credentials
-        run: doctl kubernetes cluster kubeconfig save --expiry-seconds 600 murmprod
-
-      - name: Restart deployment
-        run: make deploy DEPLOY_ENV=production
+      - name: Setup SSH and Deploy Services
+        run: ./scripts/deploy-services.sh
