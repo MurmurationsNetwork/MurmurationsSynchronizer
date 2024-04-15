@@ -2,7 +2,7 @@ module github.com/MurmurationsNetwork/MurmurationsSynchronizer
 
 go 1.19
 
-require go.mongodb.org/mongo-driver v1.14.0
+require go.mongodb.org/mongo-driver v1.15.0
 
 require (
 	github.com/golang/snappy v0.0.4 // indirect
