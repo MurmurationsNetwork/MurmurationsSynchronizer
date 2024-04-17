@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 )
@@ -82,11 +83,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 func connectMongo() (*mongo.Client, error) {
 	mongoUrl := os.Getenv("MONGO_URL")
-	credential := options.Credential{
-		Username: os.Getenv("MONGO_USERNAME"),
-		Password: os.Getenv("MONGO_PASSWORD"),
-	}
-	clientOptions := options.Client().ApplyURI(mongoUrl).SetAuth(credential)
+	username := url.QueryEscape(os.Getenv("MONGO_USERNAME"))
+	password := url.QueryEscape(os.Getenv("MONGO_PASSWORD"))
+	mongoURI := "mongodb://" + username + ":" + password + "@" + mongoUrl + "/?authSource=admin&tls=true"
+
+	clientOptions := options.Client().ApplyURI(mongoURI)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		return nil, err
