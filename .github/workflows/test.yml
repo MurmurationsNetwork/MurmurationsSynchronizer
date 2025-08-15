@@ -16,7 +16,7 @@ jobs:
       DEPLOY_ENV: staging
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup SSH and Deploy Services
         run: ./scripts/deploy-services.sh
