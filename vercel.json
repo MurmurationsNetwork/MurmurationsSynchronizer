@@ -1,4 +1,10 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.go": {
+      "maxDuration": 60
+    }
+  },
   "build": {
     "env": {
       "GO_BUILD_FLAGS": "-ldflags '-s -w'"
